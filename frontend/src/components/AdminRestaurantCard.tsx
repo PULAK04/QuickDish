@@ -1,0 +1,7 @@
+import axios from "axios";
+import { adminService } from "../config";
+import toast from "react-hot-toast";
+import { BiCheckShield, BiMapPin, BiPhone } from "react-icons/bi";
+
+const AdminRestaurantCard=({restaurant,onVerify}:{restaurant:any;onVerify:()=>void})=>{const verify=async()=>{try{await axios.patch(`${adminService}/api/v1/verify/restaurant/${restaurant._id}`,{}, {headers:{Authorization:`Bearer ${localStorage.getItem("token")}`}});toast.success("Restaurant verified");onVerify();}catch(error){toast.error(axios.isAxiosError(error)?error.response?.data?.message||"Could not verify restaurant":"Could not verify restaurant");}};return <article className="cm-card overflow-hidden"><div className="h-44 bg-[#1c232d]">{restaurant.image&&<img src={restaurant.image} className="h-full w-full object-cover" alt={restaurant.name||"Restaurant"}/>}</div><div className="p-5"><h3 className="text-lg font-black text-slate-100">{restaurant.name}</h3><p className="mt-3 flex items-center gap-2 text-sm text-slate-400"><BiPhone className="text-orange-500"/>{restaurant.phone||"No phone"}</p><p className="mt-2 flex items-start gap-2 text-sm leading-5 text-slate-400"><BiMapPin className="mt-0.5 shrink-0 text-orange-500"/>{restaurant.autoLocation?.formattedAddress||"Location unavailable"}</p><button className="cm-primary mt-5 w-full" onClick={verify}><BiCheckShield/>Verify restaurant</button></div></article>;};
+export default AdminRestaurantCard;

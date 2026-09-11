@@ -1,0 +1,7 @@
+import toast from "react-hot-toast";
+import { adminService } from "../config";
+import axios from "axios";
+import { BiCheckShield, BiIdCard, BiPhone } from "react-icons/bi";
+
+const RiderAdmin=({rider,onVerify}:{rider:any;onVerify:()=>void})=>{const verify=async()=>{try{await axios.patch(`${adminService}/api/v1/verify/rider/${rider._id}`,{}, {headers:{Authorization:`Bearer ${localStorage.getItem("token")}`}});toast.success("Rider verified");onVerify();}catch(error){toast.error(axios.isAxiosError(error)?error.response?.data?.message||"Could not verify rider":"Could not verify rider");}};return <article className="cm-card overflow-hidden"><div className="h-48 bg-[#1c232d]">{rider.picture&&<img src={rider.picture} className="h-full w-full object-cover" alt="Rider verification"/>}</div><div className="p-5"><h3 className="text-lg font-black text-slate-100">Delivery partner application</h3><div className="mt-4 space-y-2 text-sm text-slate-400"><p className="flex items-center gap-2"><BiPhone className="text-orange-500"/>{rider.phoneNumber}</p><p className="flex items-center gap-2"><BiIdCard className="text-orange-500"/>Aadhaar: •••• {String(rider.aadharNumber || "").slice(-4)}</p><p className="flex items-center gap-2"><BiIdCard className="text-orange-500"/>DL: {rider.drivingLicenseNumber}</p></div><button className="cm-primary mt-5 w-full" onClick={verify}><BiCheckShield/>Verify rider</button></div></article>;};
+export default RiderAdmin;

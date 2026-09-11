@@ -1,0 +1,10 @@
+const env = import.meta.env;
+export const brandName = "QuickDish";
+const apiService = env.VITE_API_URL || "http://localhost:5000";
+export const authService = apiService;
+export const restaurantService = apiService;
+export const utilsService = apiService;
+export const realtimeService = apiService;
+export const riderService = apiService;
+export const adminService = apiService;
+export const googleClientId = env.VITE_GOOGLE_CLIENT_ID || "";
