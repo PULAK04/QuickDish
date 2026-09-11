@@ -32,7 +32,11 @@ export const addMenuItem = TryCatch(async (req: AuthenticatedRequest, res) => {
     });
   }
 
-  const restaurant = await getOwnedRestaurant(req.user._id.toString(), restaurantId);
+  const restaurant = await getOwnedRestaurant(
+    req.user._id.toString(),
+    restaurantId
+  );
+
   if (!restaurant) {
     return res.status(404).json({
       message: "Restaurant not found or you do not own it",
@@ -40,25 +44,36 @@ export const addMenuItem = TryCatch(async (req: AuthenticatedRequest, res) => {
   }
 
   const file = req.file;
+
   if (!file) {
     return res.status(400).json({ message: "Please give image" });
   }
 
   const fileBuffer = getBuffer(file);
+
   if (!fileBuffer?.content) {
-    return res.status(500).json({ message: "Failed to create file buffer" });
+    return res.status(500).json({
+      message: "Failed to create file buffer",
+    });
   }
 
   const imageUrl = await uploadImage(fileBuffer.content);
+
   const cleanName = name.trim();
   const cleanDescription = description?.trim() || "";
 
   let embedding: number[] | undefined;
+
   try {
-    embedding = await generateMenuItemEmbedding(cleanName, cleanDescription);
+    embedding = await generateMenuItemEmbedding(
+      cleanName,
+      cleanDescription
+    );
   } catch (error) {
-    // Indexing failure must not prevent the menu item from being created.
-    console.error("Menu embedding generation failed during create:", error);
+    console.error(
+      "Menu embedding generation failed during create:",
+      error
+    );
   }
 
   const item = await MenuItems.create({
@@ -67,7 +82,14 @@ export const addMenuItem = TryCatch(async (req: AuthenticatedRequest, res) => {
     price: numericPrice,
     restaurantId: restaurant._id,
     image: imageUrl,
-    ...(embedding ? { embedding, embeddingModel: process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-2", embeddingUpdatedAt: new Date() } : {}),
+    ...(embedding
+      ? {
+        embedding,
+        embeddingModel:
+          process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-2",
+        embeddingUpdatedAt: new Date(),
+      }
+      : {}),
   });
 
   res.status(201).json({
@@ -76,155 +98,241 @@ export const addMenuItem = TryCatch(async (req: AuthenticatedRequest, res) => {
   });
 });
 
-export const updateMenuItem = TryCatch(async (req: AuthenticatedRequest, res) => {
-  if (!req.user) {
-    return res.status(401).json({ message: "Please login" });
-  }
+export const updateMenuItem = TryCatch(
+  async (req: AuthenticatedRequest, res) => {
+    if (!req.user) {
+      return res.status(401).json({ message: "Please login" });
+    }
 
-  const { itemId } = req.params;
-  if (!itemId || !mongoose.Types.ObjectId.isValid(itemId)) {
-    return res.status(400).json({ message: "Invalid item id" });
-  }
+    const itemId =
+      typeof req.params.itemId === "string"
+        ? req.params.itemId
+        : undefined;
 
-  const item = await MenuItems.findById(itemId);
-  if (!item) {
-    return res.status(404).json({ message: "No item found" });
-  }
+    if (!itemId || !mongoose.Types.ObjectId.isValid(itemId)) {
+      return res.status(400).json({ message: "Invalid item id" });
+    }
 
-  const restaurant = await Restaurant.findOne({
-    _id: item.restaurantId,
-    ownerId: req.user._id,
-  });
+    const item = await MenuItems.findById(itemId);
 
-  if (!restaurant) {
-    return res.status(403).json({
-      message: "You can only update items from your own restaurant",
+    if (!item) {
+      return res.status(404).json({ message: "No item found" });
+    }
+
+    const restaurant = await Restaurant.findOne({
+      _id: item.restaurantId,
+      ownerId: req.user._id,
+    });
+
+    if (!restaurant) {
+      return res.status(403).json({
+        message: "You can only update items from your own restaurant",
+      });
+    }
+
+    const { name, description, price, isAvailable } = req.body;
+
+    let contentChanged = false;
+
+    if (name !== undefined) {
+      if (typeof name !== "string" || !name.trim()) {
+        return res.status(400).json({
+          message: "Name cannot be empty",
+        });
+      }
+
+      if (item.name !== name.trim()) {
+        contentChanged = true;
+      }
+
+      item.name = name.trim();
+    }
+
+    if (description !== undefined) {
+      const cleanDescription =
+        typeof description === "string"
+          ? description.trim()
+          : "";
+
+      if (item.description !== cleanDescription) {
+        contentChanged = true;
+      }
+
+      item.description = cleanDescription;
+    }
+
+    if (price !== undefined) {
+      const numericPrice = Number(price);
+
+      if (
+        !Number.isFinite(numericPrice) ||
+        numericPrice <= 0
+      ) {
+        return res.status(400).json({
+          message: "Price must be a positive number",
+        });
+      }
+
+      item.price = numericPrice;
+    }
+
+    if (isAvailable !== undefined) {
+      if (typeof isAvailable !== "boolean") {
+        return res.status(400).json({
+          message: "isAvailable must be boolean",
+        });
+      }
+
+      item.isAvailable = isAvailable;
+    }
+
+    if (contentChanged) {
+      try {
+        const embedding = await generateMenuItemEmbedding(
+          item.name,
+          item.description || ""
+        );
+
+        item.embedding = embedding;
+
+        item.embeddingModel =
+          process.env.GEMINI_EMBEDDING_MODEL ||
+          "gemini-embedding-2";
+
+        item.embeddingUpdatedAt = new Date();
+      } catch (error) {
+        console.error(
+          "Menu embedding generation failed during update:",
+          error
+        );
+      }
+    }
+
+    await item.save();
+
+    res.json({
+      message: "Menu item updated successfully",
+      item,
     });
   }
+);
 
-  const { name, description, price, isAvailable } = req.body;
-  let contentChanged = false;
+export const getAllItems = TryCatch(
+  async (req: AuthenticatedRequest, res) => {
+    const id =
+      typeof req.params.id === "string"
+        ? req.params.id
+        : undefined;
 
-  if (name !== undefined) {
-    if (typeof name !== "string" || !name.trim()) {
-      return res.status(400).json({ message: "Name cannot be empty" });
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        message: "Valid restaurant id is required",
+      });
     }
-    if (item.name !== name.trim()) contentChanged = true;
-    item.name = name.trim();
-  }
 
-  if (description !== undefined) {
-    const cleanDescription = typeof description === "string" ? description.trim() : "";
-    if (item.description !== cleanDescription) contentChanged = true;
-    item.description = cleanDescription;
-  }
+    const items = await MenuItems.find({
+      restaurantId: id,
+    }).select("-embedding");
 
-  if (price !== undefined) {
-    const numericPrice = Number(price);
-    if (!Number.isFinite(numericPrice) || numericPrice <= 0) {
-      return res.status(400).json({ message: "Price must be a positive number" });
+    res.json(items);
+  }
+);
+
+export const deleteMenuItem = TryCatch(
+  async (req: AuthenticatedRequest, res) => {
+    if (!req.user) {
+      return res.status(401).json({
+        message: "Please login",
+      });
     }
-    item.price = numericPrice;
-  }
 
-  if (isAvailable !== undefined) {
-    if (typeof isAvailable !== "boolean") {
-      return res.status(400).json({ message: "isAvailable must be boolean" });
+    const itemId =
+      typeof req.params.itemId === "string"
+        ? req.params.itemId
+        : undefined;
+
+    if (!itemId || !mongoose.Types.ObjectId.isValid(itemId)) {
+      return res.status(400).json({
+        message: "Invalid item id",
+      });
     }
-    item.isAvailable = isAvailable;
-  }
 
-  if (contentChanged) {
-    try {
-      const embedding = await generateMenuItemEmbedding(item.name, item.description || "");
-      item.embedding = embedding;
-      item.embeddingModel = process.env.GEMINI_EMBEDDING_MODEL || "gemini-embedding-2";
-      item.embeddingUpdatedAt = new Date();
-    } catch (error) {
-      console.error("Menu embedding generation failed during update:", error);
-      // Preserve existing embedding rather than deleting a previously working vector.
+    const item = await MenuItems.findById(itemId);
+
+    if (!item) {
+      return res.status(404).json({
+        message: "No item found",
+      });
     }
+
+    const restaurant = await Restaurant.findOne({
+      _id: item.restaurantId,
+      ownerId: req.user._id,
+    });
+
+    if (!restaurant) {
+      return res.status(404).json({
+        message: "NO Restaurant found",
+      });
+    }
+
+    await item.deleteOne();
+
+    res.json({
+      message: "Menu item deleted successfully",
+    });
   }
+);
 
-  await item.save();
+export const toggleMenuItemAvailability = TryCatch(
+  async (req: AuthenticatedRequest, res) => {
+    if (!req.user) {
+      return res.status(401).json({
+        message: "Please login",
+      });
+    }
 
-  res.json({
-    message: "Menu item updated successfully",
-    item,
-  });
-});
+    const itemId =
+      typeof req.params.itemId === "string"
+        ? req.params.itemId
+        : undefined;
 
-export const getAllItems = TryCatch(async (req: AuthenticatedRequest, res) => {
-  const { id } = req.params;
-  if (!id || !mongoose.Types.ObjectId.isValid(id)) {
-    return res.status(400).json({ message: "Valid restaurant id is required" });
+    if (!itemId || !mongoose.Types.ObjectId.isValid(itemId)) {
+      return res.status(400).json({
+        message: "Invalid item id",
+      });
+    }
+
+    const item = await MenuItems.findById(itemId);
+
+    if (!item) {
+      return res.status(404).json({
+        message: "No item found",
+      });
+    }
+
+    const restaurant = await Restaurant.findOne({
+      _id: item.restaurantId,
+      ownerId: req.user._id,
+    });
+
+    if (!restaurant) {
+      return res.status(404).json({
+        message: "NO Restaurant found",
+      });
+    }
+
+    item.isAvailable = !item.isAvailable;
+
+    await item.save();
+
+    res.json({
+      message: `Item Marked as ${item.isAvailable ? "available" : "unavailable"
+        }`,
+      item,
+    });
   }
-
-  const items = await MenuItems.find({ restaurantId: id }).select("-embedding");
-  res.json(items);
-});
-
-export const deleteMenuItem = TryCatch(async (req: AuthenticatedRequest, res) => {
-  if (!req.user) {
-    return res.status(401).json({ message: "Please login" });
-  }
-
-  const { itemId } = req.params;
-  if (!itemId || !mongoose.Types.ObjectId.isValid(itemId)) {
-    return res.status(400).json({ message: "Invalid item id" });
-  }
-
-  const item = await MenuItems.findById(itemId);
-  if (!item) {
-    return res.status(404).json({ message: "No item found" });
-  }
-
-  const restaurant = await Restaurant.findOne({
-    _id: item.restaurantId,
-    ownerId: req.user._id,
-  });
-
-  if (!restaurant) {
-    return res.status(404).json({ message: "NO Restaurant found" });
-  }
-
-  await item.deleteOne();
-
-  res.json({ message: "Menu item deleted successfully" });
-});
-
-export const toggleMenuItemAvailability = TryCatch(async (req: AuthenticatedRequest, res) => {
-  if (!req.user) {
-    return res.status(401).json({ message: "Please login" });
-  }
-
-  const { itemId } = req.params;
-  if (!itemId || !mongoose.Types.ObjectId.isValid(itemId)) {
-    return res.status(400).json({ message: "Invalid item id" });
-  }
-
-  const item = await MenuItems.findById(itemId);
-  if (!item) {
-    return res.status(404).json({ message: "No item found" });
-  }
-
-  const restaurant = await Restaurant.findOne({
-    _id: item.restaurantId,
-    ownerId: req.user._id,
-  });
-
-  if (!restaurant) {
-    return res.status(404).json({ message: "NO Restaurant found" });
-  }
-
-  item.isAvailable = !item.isAvailable;
-  await item.save();
-
-  res.json({
-    message: `Item Marked as ${item.isAvailable ? "available" : "unavailable"}`,
-    item,
-  });
-});
+);
 
 export const searchMenu = TryCatch(async (req, res) => {
   const {
@@ -245,8 +353,13 @@ export const searchMenu = TryCatch(async (req, res) => {
     });
   }
 
-  if (restaurantId && !mongoose.Types.ObjectId.isValid(restaurantId)) {
-    return res.status(400).json({ message: "Invalid restaurant id" });
+  if (
+    restaurantId &&
+    !mongoose.Types.ObjectId.isValid(restaurantId)
+  ) {
+    return res.status(400).json({
+      message: "Invalid restaurant id",
+    });
   }
 
   const result = await searchMenuItems({
