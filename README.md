@@ -2,7 +2,7 @@
 
 ### Full-Stack Food Delivery Platform · Modular Monolith · RAG-Based Menu Search
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-QuickDish-orange?style=for-the-badge&logo=render&logoColor=white)](https://cravemate-client.onrender.com)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-QuickDish-orange?style=for-the-badge&logo=render&logoColor=white)](https://quickdish-client.onrender.com)
 
 ![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white)
@@ -497,7 +497,7 @@ Publish Directory: dist
 
 ## 🌐 Live Demo
 
-### [🚀 Open QuickDish](https://cravemate-client.onrender.com)
+### [🚀 Open QuickDish](https://quickdish-client.onrender.com)
 
 > Free Render instances may take a short time to wake up after inactivity.
 
@@ -526,6 +526,6 @@ Publish Directory: dist
 
 **Discover food. Order fast. Track live.**
 
-[Live Demo](https://cravemate-client.onrender.com)
+[Live Demo](https://quickdish-client.onrender.com)
 
 </div>

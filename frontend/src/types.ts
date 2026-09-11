@@ -5,7 +5,7 @@ export interface User {
   name: string;
   email: string;
   image: string;
-  role: string;
+  role: string | null;
 }
 
 export interface LocationData {
@@ -18,16 +18,31 @@ export interface AppContextType {
   user: User | null;
   loading: boolean;
   isAuth: boolean;
-  setUser: React.Dispatch<React.SetStateAction<User | null>>;
-  setIsAuth: React.Dispatch<React.SetStateAction<boolean>>;
-  setLoading: React.Dispatch<React.SetStateAction<boolean>>;
+
+  setUser: React.Dispatch<
+    React.SetStateAction<User | null>
+  >;
+
+  setIsAuth: React.Dispatch<
+    React.SetStateAction<boolean>
+  >;
+
+  setLoading: React.Dispatch<
+    React.SetStateAction<boolean>
+  >;
+
   location: LocationData | null;
   loadingLocation: boolean;
   locationError: string | null;
+
   requestLocation: () => void;
+
   city: string;
+
   cart: ICart[] | null;
+
   fetchCart: () => Promise<void>;
+
   subTotal: number;
   quauntity: number;
 }
@@ -43,9 +58,10 @@ export interface IRestaurant {
 
   autoLocation: {
     type: "Point";
-    coordinates: [number, number]; //[longitude, latitude]
+    coordinates: [number, number];
     formattedAddress: string;
   };
+
   isOpen: boolean;
   createdAt: Date;
 }
@@ -65,8 +81,12 @@ export interface IMenuItem {
 export interface ICart {
   _id: string;
   userId: string;
-  restaurantId: string | IRestaurant;
-  itemId: string | IMenuItem;
+  restaurantId:
+  | string
+  | IRestaurant;
+  itemId:
+  | string
+  | IMenuItem;
   quauntity: number;
   cretedAt: Date;
   updatedAt: Date;
@@ -74,13 +94,21 @@ export interface ICart {
 
 export interface IOrder {
   _id: string;
+
   userId: string;
+
   restaurantId: string;
+
   restaurantName: string;
+
   riderId?: string | null;
+
   riderPhone: number | null;
+
   riderName: string | null;
+
   distance: number;
+
   riderAmount: number;
 
   items: {
@@ -91,8 +119,11 @@ export interface IOrder {
   }[];
 
   subtotal: number;
+
   deliveryFee: number;
+
   platfromFee: number;
+
   totalAmount: number;
 
   addressId: string;
@@ -105,20 +136,25 @@ export interface IOrder {
   };
 
   status:
-    | "placed"
-    | "accepted"
-    | "preparing"
-    | "ready_for_rider"
-    | "rider_assigned"
-    | "picked_up"
-    | "delivered"
-    | "cancelled";
+  | "placed"
+  | "accepted"
+  | "preparing"
+  | "ready_for_rider"
+  | "rider_assigned"
+  | "picked_up"
+  | "delivered"
+  | "cancelled";
 
   paymentMethod: "razorpay";
-  paymentStatus: "pending" | "paid" | "failed";
+
+  paymentStatus:
+  | "pending"
+  | "paid"
+  | "failed";
 
   expiresAt: Date;
 
   createdAt: Date;
+
   updatedAt: Date;
 }

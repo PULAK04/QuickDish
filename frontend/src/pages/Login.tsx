@@ -18,19 +18,10 @@ import {
   BiCheckCircle,
   BiMapPin,
 } from "react-icons/bi";
-import {
-  MdOutlineDeliveryDining,
-} from "react-icons/md";
+import { MdOutlineDeliveryDining } from "react-icons/md";
+import type { User } from "../types";
 
 type AuthMode = "login" | "register";
-
-interface AuthUser {
-  _id: string;
-  name: string;
-  email: string;
-  image: string;
-  role: string | null;
-}
 
 const Login = () => {
   const navigate = useNavigate();
@@ -70,7 +61,7 @@ const Login = () => {
     }));
   };
 
-  const handleModeChange = (
+  const switchMode = (
     nextMode: AuthMode
   ) => {
     setMode(nextMode);
@@ -91,15 +82,10 @@ const Login = () => {
   ) => {
     e.preventDefault();
 
-    const name =
-      form.name.trim();
-
+    const name = form.name.trim();
     const email =
       form.email.trim().toLowerCase();
-
-    const password =
-      form.password;
-
+    const password = form.password;
     const confirmPassword =
       form.confirmPassword;
 
@@ -125,9 +111,7 @@ const Login = () => {
         return;
       }
 
-      if (
-        password.length < 8
-      ) {
+      if (password.length < 8) {
         toast.error(
           "Password must be at least 8 characters."
         );
@@ -135,8 +119,7 @@ const Login = () => {
       }
 
       if (
-        password !==
-        confirmPassword
+        password !== confirmPassword
       ) {
         toast.error(
           "Passwords do not match."
@@ -159,9 +142,9 @@ const Login = () => {
       }
     }
 
-    setLoading(true);
-
     try {
+      setLoading(true);
+
       const endpoint =
         mode === "register"
           ? "/api/auth/register"
@@ -191,7 +174,7 @@ const Login = () => {
       );
 
       setUser(
-        data.user as AuthUser
+        data.user as User
       );
 
       setIsAuth(true);
@@ -215,8 +198,7 @@ const Login = () => {
         axios.isAxiosError(error)
       ) {
         const message =
-          error.response?.data
-            ?.message;
+          error.response?.data?.message;
 
         toast.error(
           message ||
@@ -244,10 +226,10 @@ const Login = () => {
       return;
     }
 
-    setLoading(true);
-
     try {
-      const result =
+      setLoading(true);
+
+      const { data } =
         await axios.post(
           `${authService}/api/auth/login`,
           {
@@ -257,11 +239,11 @@ const Login = () => {
 
       localStorage.setItem(
         "token",
-        result.data.token
+        data.token
       );
 
       setUser(
-        result.data.user as AuthUser
+        data.user as User
       );
 
       setIsAuth(true);
@@ -283,8 +265,7 @@ const Login = () => {
         axios.isAxiosError(error)
       ) {
         toast.error(
-          error.response?.data
-            ?.message ||
+          error.response?.data?.message ||
           "Could not sign you in with Google."
         );
       } else {
@@ -310,7 +291,7 @@ const Login = () => {
   const handleGoogleLogin = () => {
     if (!googleClientId) {
       toast.error(
-        "Add VITE_GOOGLE_CLIENT_ID to frontend/.env first."
+        "Add VITE_GOOGLE_CLIENT_ID to frontend environment variables."
       );
       return;
     }
@@ -320,7 +301,7 @@ const Login = () => {
 
   return (
     <main className="mx-auto grid min-h-[calc(100vh-73px)] max-w-7xl items-center gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:py-16">
-      <section className="relative hidden min-h-[650px] overflow-hidden rounded-[2.25rem] bg-[#0a0d12] p-10 text-white shadow-2xl lg:block">
+      <section className="relative hidden min-h-[590px] overflow-hidden rounded-[2.25rem] bg-[#0a0d12] p-10 text-white shadow-2xl lg:block">
         <div className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-orange-500/25 blur-3xl" />
 
         <div className="absolute -bottom-24 -left-14 h-72 w-72 rounded-full bg-rose-500/20 blur-3xl" />
@@ -348,29 +329,29 @@ const Login = () => {
 
           <div className="grid grid-cols-3 gap-3">
             {[
-              [
-                "Nearby",
-                "restaurants",
-                <BiMapPin key="map" />,
-              ],
-              [
-                "Secure",
-                "checkout",
-                <BiCheckCircle key="check" />,
-              ],
-              [
-                "Live",
-                "delivery",
-                <MdOutlineDeliveryDining key="delivery" />,
-              ],
+              {
+                title: "Nearby",
+                subtitle: "restaurants",
+                icon: <BiMapPin />,
+              },
+              {
+                title: "Secure",
+                subtitle: "checkout",
+                icon: <BiCheckCircle />,
+              },
+              {
+                title: "Live",
+                subtitle: "delivery",
+                icon: <MdOutlineDeliveryDining />,
+              },
             ].map(
-              ([
+              ({
                 title,
                 subtitle,
                 icon,
-              ]) => (
+              }) => (
                 <div
-                  key={String(title)}
+                  key={title}
                   className="rounded-2xl border border-white/10 bg-white/[0.06] p-4"
                 >
                   <span className="text-xl text-orange-300">
@@ -410,17 +391,17 @@ const Login = () => {
           <p className="mt-2 text-sm leading-6 text-slate-400">
             {mode === "login"
               ? "Sign in with Google or use your email and password."
-              : "Create an account using your name, email, and password."}
+              : "Create an account with your name, email, and password."}
           </p>
 
+          {/* Mode switch */}
           <div className="mt-6 grid grid-cols-2 rounded-2xl bg-[#141A22] p-1">
             <button
               type="button"
               onClick={() =>
-                handleModeChange(
-                  "login"
-                )
+                switchMode("login")
               }
+              disabled={loading}
               className={`rounded-xl px-3 py-2.5 text-sm font-bold transition ${mode === "login"
                   ? "bg-orange-500 text-white shadow-sm"
                   : "text-slate-400 hover:text-slate-200"
@@ -432,10 +413,9 @@ const Login = () => {
             <button
               type="button"
               onClick={() =>
-                handleModeChange(
-                  "register"
-                )
+                switchMode("register")
               }
+              disabled={loading}
               className={`rounded-xl px-3 py-2.5 text-sm font-bold transition ${mode === "register"
                   ? "bg-orange-500 text-white shadow-sm"
                   : "text-slate-400 hover:text-slate-200"
@@ -445,6 +425,7 @@ const Login = () => {
             </button>
           </div>
 
+          {/* Email / Password form */}
           <form
             onSubmit={handleEmailAuth}
             className="mt-6 space-y-4"
@@ -518,8 +499,7 @@ const Login = () => {
                   type="button"
                   onClick={() =>
                     setShowPassword(
-                      (prev) =>
-                        !prev
+                      (prev) => !prev
                     )
                   }
                   disabled={loading}
@@ -569,8 +549,7 @@ const Login = () => {
                     type="button"
                     onClick={() =>
                       setShowConfirmPassword(
-                        (prev) =>
-                          !prev
+                        (prev) => !prev
                       )
                     }
                     disabled={loading}
@@ -606,12 +585,14 @@ const Login = () => {
             </button>
           </form>
 
+          {/* Divider */}
           <div className="my-6 flex items-center gap-3 text-xs text-slate-500">
             <span className="h-px flex-1 bg-[#222b36]" />
             OR
             <span className="h-px flex-1 bg-[#222b36]" />
           </div>
 
+          {/* Google */}
           <button
             type="button"
             onClick={
@@ -634,7 +615,7 @@ const Login = () => {
                 <button
                   type="button"
                   onClick={() =>
-                    handleModeChange(
+                    switchMode(
                       "register"
                     )
                   }
@@ -649,9 +630,7 @@ const Login = () => {
                 <button
                   type="button"
                   onClick={() =>
-                    handleModeChange(
-                      "login"
-                    )
+                    switchMode("login")
                   }
                   className="font-bold text-orange-500 hover:text-orange-400"
                 >
